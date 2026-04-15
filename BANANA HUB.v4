@@ -1,0 +1,137 @@
+-- [[ BANANA HUB v.4: DRAGGABLE MENU + ESP + KEY SYSTEM ]] --
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- [[ Settings ]] --
+local _G = {
+    AimbotEnabled = false,
+    ESPEnabled = false,
+    FOVSize = 150,
+    Smoothness = 0.05,
+    TargetPart = "Head"
+}
+
+local CorrectKey = "BANANA-KEY-2024"
+
+-- [[ 1. ระบบ Key System ]] --
+local KeyGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+KeyGui.ResetOnSpawn = false
+
+local KeyFrame = Instance.new("Frame", KeyGui)
+KeyFrame.Size = UDim2.new(0, 250, 0, 150)
+KeyFrame.Position = UDim2.new(0.5, -125, 0.4, 0)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", KeyFrame)
+local KeyStroke = Instance.new("UIStroke", KeyFrame)
+KeyStroke.Color = Color3.fromRGB(255, 255, 0)
+KeyStroke.Thickness = 2
+
+local KeyTitle = Instance.new("TextLabel", KeyFrame)
+KeyTitle.Size = UDim2.new(1, 0, 0.3, 0)
+KeyTitle.Text = "BANANA HUB v.4"
+KeyTitle.TextColor3 = Color3.new(1, 1, 0)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Font = Enum.Font.GothamBold
+
+local KeyInput = Instance.new("TextBox", KeyFrame)
+KeyInput.Size = UDim2.new(0.8, 0, 0.25, 0)
+KeyInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+KeyInput.PlaceholderText = "Enter Key..."
+KeyInput.Text = ""
+KeyInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+KeyInput.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", KeyInput)
+
+local SubmitBtn = Instance.new("TextButton", KeyFrame)
+SubmitBtn.Size = UDim2.new(0.8, 0, 0.25, 0)
+SubmitBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+SubmitBtn.Text = "SUBMIT"
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+SubmitBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", SubmitBtn)
+
+-- [[ 2. ฟังก์ชัน Drag (ลากได้) ]] --
+local function MakeDraggable(gui)
+	local dragging, dragInput, dragStart, startPos
+	local function update(input)
+		local delta = input.Position - dragStart
+		gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	gui.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = gui.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	gui.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then update(input) end
+	end)
+end
+
+-- [[ 3. ระบบหลักหลังผ่าน Key ]] --
+local function StartScript()
+    KeyGui:Destroy()
+    
+    local MainGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    MainGui.ResetOnSpawn = false
+
+    -- วงกลม FOV
+    local FOVFrame = Instance.new("Frame", MainGui)
+    FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    FOVFrame.BackgroundTransparency = 1
+    FOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    FOVFrame.Size = UDim2.new(0, _G.FOVSize * 2, 0, _G.FOVSize * 2)
+    local FOVStroke = Instance.new("UIStroke", FOVFrame)
+    FOVStroke.Thickness = 2
+    FOVStroke.Color = Color3.fromRGB(255, 255, 0)
+    Instance.new("UICorner", FOVFrame).CornerRadius = UDim.new(1, 0)
+
+    -- ปุ่ม B (เปิด/ปิดเมนู)
+    local ToggleBtn = Instance.new("TextButton", MainGui)
+    ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+    ToggleBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+    ToggleBtn.Text = "B"
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = 25
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+    MakeDraggable(ToggleBtn)
+
+    -- หน้าต่างเมนู BANANA HUB
+    local MenuFrame = Instance.new("Frame", MainGui)
+    MenuFrame.Size = UDim2.new(0, 180, 0, 160)
+    MenuFrame.Position = UDim2.new(0.5, -90, 0.2, 0)
+    MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    MenuFrame.Visible = false
+    Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 10)
+    local MenuStroke = Instance.new("UIStroke", MenuFrame)
+    MenuStroke.Color = Color3.fromRGB(255, 255, 0)
+    MenuStroke.Thickness = 2
+    MakeDraggable(MenuFrame)
+
+    local Title = Instance.new("TextLabel", MenuFrame)
+    Title.Size = UDim2.new(1, 0, 0.2, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "BANANA HUB v.4"
+    Title.TextColor3 = Color3.new(1, 1, 0)
+    Title.Font = Enum.Font.GothamBold
+
+    ToggleBtn.MouseButton1Click:Connect(function()
+        MenuFrame.Visible = not MenuFrame.Visible
+    end)
+
+    -- ESP & Aim Logic
+    local function UpdateESP()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Cha
