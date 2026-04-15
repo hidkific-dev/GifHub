@@ -1,0 +1,172 @@
+-- โหลด UI
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+-- ================= ตัวแปร =================
+local speedEnabled = false
+local speedValue = 100
+
+local jumpEnabled = false
+local jumpValue = 100
+
+local ESPEnabled = false
+local ESPBoxes = {}
+
+-- 🔧 แก้บัค Character
+local function getHumanoid()
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char:WaitForChild("Humanoid")
+end
+
+-- ================= UI =================
+local Window = WindUI:CreateWindow({
+    Title = "King HUB",
+    Icon = "rbxassetid://137877095538630",
+    Author = "King",
+})
+
+local Tab = Window:Tab({
+    Title = "Main",
+    Icon = "zap",
+})
+
+Tab:Select()
+
+-- ================= SPEED =================
+Tab:Input({
+    Title = "ใส่ความเร็ว",
+    Desc = "เช่น 100 / 200 / 500",
+    Value = "100",
+    Callback = function(value)
+        speedValue = tonumber(value) or 100
+    end
+})
+
+Tab:Toggle({
+    Title = "เปิด/ปิด ความเร็ว",
+    Value = false,
+    Callback = function(state)
+        speedEnabled = state
+    end
+})
+
+-- ================= JUMP =================
+Tab:Input({
+    Title = "ใส่ความสูงกระโดด",
+    Desc = "เช่น 100 / 150 / 300",
+    Value = "100",
+    Callback = function(value)
+        jumpValue = tonumber(value) or 100
+    end
+})
+
+Tab:Toggle({
+    Title = "เปิด/ปิด กระโดดสูง",
+    Value = false,
+    Callback = function(state)
+        jumpEnabled = state
+    end
+})
+
+local Tab = Window:Tab({
+    Title = "Main",
+    Icon = "zap",
+})
+
+-- ================= ESP =================
+Tab:Toggle({
+    Title = "ESP กล่องผู้เล่น",
+    Value = false,
+    Callback = function(state)
+        ESPEnabled = state
+    end
+})
+
+-- สร้าง ESP
+local function createESP(plr)
+    if plr == player then return end
+
+    local box = Drawing.new("Square")
+    box.Color = Color3.fromRGB(255,255,255)
+    box.Thickness = 2
+    box.Filled = false
+    box.Visible = false
+
+    ESPBoxes[plr] = box
+end
+
+local function removeESP(plr)
+    if ESPBoxes[plr] then
+        ESPBoxes[plr]:Remove()
+        ESPBoxes[plr] = nil
+    end
+end
+
+for _, p in pairs(Players:GetPlayers()) do
+    createESP(p)
+end
+
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+-- ================= LOOP =================
+RunService.RenderStepped:Connect(function()
+    local humanoid = getHumanoid()
+
+    -- 🔥 SPEED
+    if speedEnabled then
+        humanoid.WalkSpeed = speedValue
+    else
+        humanoid.WalkSpeed = 16
+    end
+
+    -- 🔥 JUMP
+    humanoid.UseJumpPower = true
+    if jumpEnabled then
+        humanoid.JumpPower = jumpValue
+    else
+        humanoid.JumpPower = 50
+    end
+
+    -- ================= ESP UPDATE =================
+    for plr, box in pairs(ESPBoxes) do
+        if not ESPEnabled then
+            box.Visible = false
+            continue
+        end
+
+        local char = plr.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+            if onScreen then
+                local scale = 1 / (Camera.CFrame.Position - hrp.Position).Magnitude * 100
+                local size = Vector2.new(40, 60) * scale
+
+                box.Size = size
+                box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                box.Visible = true
+            else
+                box.Visible = false
+            end
+        else
+            box.Visible = false
+        end
+    end
+end)
+
+-- 🔁 กันตายแล้วค่าหาย
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    local humanoid = getHumanoid()
+
+    humanoid.WalkSpeed = speedEnabled and speedValue or 16
+    humanoid.UseJumpPower = true
+    humanoid.JumpPower = jumpEnabled and jumpValue or 50
+end)
+
