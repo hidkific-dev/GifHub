@@ -1,0 +1,100 @@
+-- [[ GEMINI HUB v11: DYNAMIC FOV & TOGGLE MENU ]] --
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local _G = {
+    AimbotEnabled = false,
+    FOVSize = 150,
+    TargetPart = "Head",
+    Smoothness = 0.05
+}
+
+-- [[ 1. สร้างวงกลม FOV (ใช้ UI สำหรับความเสถียรบนมือถือ) ]] --
+local FOVGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+FOVGui.Name = "FOV_Display"
+FOVGui.ResetOnSpawn = false
+
+local FOVFrame = Instance.new("Frame", FOVGui)
+FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FOVFrame.BackgroundTransparency = 1 -- โปร่งใสตรงกลาง
+FOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVFrame.Size = UDim2.new(0, _G.FOVSize * 2, 0, _G.FOVSize * 2)
+
+local UIStroke = Instance.new("UIStroke", FOVFrame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(255, 255, 0) -- เริ่มต้นสีเหลือง
+
+local UICorner = Instance.new("UICorner", FOVFrame)
+UICorner.CornerRadius = UDim.new(1, 0) -- ทรงกลม
+
+-- [[ 2. ระบบเช็คกำแพง (Wall Check) ]] --
+local function IsVisible(part)
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {LocalPlayer.Character, part.Parent}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local ray = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position), params)
+    return ray == nil
+end
+
+-- [[ 3. ค้นหาเป้าหมายในวง FOV ]] --
+local function GetTarget()
+    local target = nil
+    local dist = _G.FOVSize
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(_G.TargetPart) then
+            local part = p.Character[_G.TargetPart]
+            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen and IsVisible(part) then
+                local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                if mag < dist then
+                    target = part
+                    dist = mag
+                end
+            end
+        end
+    end
+    return target
+end
+
+-- [[ 4. ระบบการทำงานหลัก ]] --
+RunService.RenderStepped:Connect(function()
+    FOVFrame.Size = UDim2.new(0, _G.FOVSize * 2, 0, _G.FOVSize * 2)
+    
+    if _G.AimbotEnabled then
+        local target = GetTarget()
+        if target then
+            local lookAt = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, 1 - _G.Smoothness)
+        end
+    end
+end)
+
+-- [[ 5. ปุ่มเปิด/ปิด และเมนูย่อย ]] --
+local MainGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+MainGui.ResetOnSpawn = false
+
+local ToggleBtn = Instance.new("TextButton", MainGui)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+ToggleBtn.Text = "B"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 25
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    _G.AimbotEnabled = not _G.AimbotEnabled
+    if _G.AimbotEnabled then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- ปุ่มเขียวเมื่อเปิด
+        UIStroke.Color = Color3.fromRGB(0, 255, 0) -- วง FOV เขียวเมื่อเปิด
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0) -- ปุ่มเหลืองเมื่อปิด
+        UIStroke.Color = Color3.fromRGB(255, 255, 0) -- วง FOV เหลืองเมื่อปิด
+    end
+end)
