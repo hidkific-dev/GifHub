@@ -1,0 +1,143 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- === [ 1. CONFIGURATION ] ===
+local Config = {
+    Aimbot = false,
+    ESP = false,
+    ShowFOV = true,
+    FOVRadius = 150,
+    AimPart = "Head",
+    CorrectKey = "MANGCIDHUB67",
+    KeyPassed = false,
+    Smoothness = 0.05
+}
+
+-- === [ 2. RAINBOW ANIMATION ] ===
+local function GetRainbowColor()
+    return Color3.fromHSV(tick() % 5 / 5, 1, 1)
+end
+
+-- === [ 3. UI DESIGN ] ===
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "MANGCID_HUB_V5"
+ScreenGui.ResetOnSpawn = false
+
+-- ปุ่มเปิด-ปิดเมนูแบบสายรุ้ง
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -30)
+ToggleBtn.Text = "🌈"
+ToggleBtn.TextSize = 30
+ToggleBtn.Visible = false
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
+ToggleStroke.Thickness = 3
+
+-- หน้าต่าง LOGIN
+local KeyFrame = Instance.new("Frame", ScreenGui)
+KeyFrame.Size = UDim2.new(0, 320, 0, 200)
+KeyFrame.Position = UDim2.new(0.5, -160, 0.5, -100)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", KeyFrame)
+local KeyStroke = Instance.new("UIStroke", KeyFrame)
+KeyStroke.Thickness = 3
+
+local KeyTitle = Instance.new("TextLabel", KeyFrame)
+KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+KeyTitle.Text = "MANGCID HUB - LOGIN"
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.TextSize = 20
+KeyTitle.BackgroundTransparency = 1
+
+local KeyInput = Instance.new("TextBox", KeyFrame)
+KeyInput.Size = UDim2.new(0.8, 0, 0, 45)
+KeyInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+KeyInput.PlaceholderText = "ใส่รหัสผ่านใหม่..."
+KeyInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+KeyInput.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", KeyInput)
+
+local KeyBtn = Instance.new("TextButton", KeyFrame)
+KeyBtn.Size = UDim2.new(0.8, 0, 0, 45)
+KeyBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+KeyBtn.Text = "เข้าสู่ระบบ"
+KeyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+KeyBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", KeyBtn)
+
+-- เมนูหลัก
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 4
+
+local MainTitle = Instance.new("TextLabel", MainFrame)
+MainTitle.Size = UDim2.new(1, 0, 0, 50)
+MainTitle.Text = "🌈 MANGCID HUB V5"
+MainTitle.Font = Enum.Font.GothamBold
+MainTitle.TextSize = 22
+MainTitle.BackgroundTransparency = 1
+
+-- วงกลม FOV
+local FOVFrame = Instance.new("Frame", ScreenGui)
+FOVFrame.BackgroundTransparency = 1
+FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
+FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVFrame.Visible = false
+Instance.new("UICorner", FOVFrame).CornerRadius = UDim.new(1, 0)
+local FOVStroke = Instance.new("UIStroke", FOVFrame)
+FOVStroke.Thickness = 2
+
+-- === [ 4. FUNCTIONS ] ===
+
+local function CheckWall(target)
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    
+    local rayResult = workspace:Raycast(Camera.CFrame.Position, (target.Position - Camera.CFrame.Position).Unit * 500, rayParams)
+    
+    if rayResult and rayResult.Instance:IsDescendantOf(target.Parent) then
+        return true
+    end
+    return false
+end
+
+local function GetClosestTarget()
+    local nearest = nil
+    local lastDist = Config.FOVRadius
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Config.AimPart) then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(p.Character[Config.AimPart].Position)
+                if onScreen and CheckWall(p.Character[Config.AimPart]) then
+                    local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if dist < lastDist then
+                        lastDist = dist
+                        nearest = p.Character[Config.AimPart]
+                    end
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+local function CreateMenuBtn(text, yPos, callback)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.85, 0, 0, 45)
+    btn.Position = UDim2.new(0.07
